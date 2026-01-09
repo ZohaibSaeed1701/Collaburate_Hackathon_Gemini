@@ -1,6 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form
-import shutil
-import json
+import shutil, json, os
 from app.utils.sentence_util import paragraph_to_sentences
 from app.utils.summary_util import get_short_summary
 from app.utils.file_loader_util import load_pdf, load_ppt
@@ -11,50 +10,57 @@ from app.utils.convert_notes_into_markdown_util import convert_notes_to_markdown
 
 router = APIRouter()
 
-@router.post("/clean")
-def clean_lecture_text(text: str = Form(...), file: UploadFile = File(...)):
+@router.post("/lecture")
+async def clean_lecture_text(
+    text: str = Form(""), 
+    file: UploadFile | None = File(None)  # File optional
+):
     """
-    Endpoint to process lecture text + uploaded PDF/PPT,
-    clean it, summarize, refine, and return final lecture notes in markdown.
+    Process lecture text + optional PDF/PPT,
+    clean, summarize, refine, and return final notes in Markdown.
     """
 
-    # Agar text JSON format me hai, parse karo; agar nahi, directly use karo
+    lecture_text = text
     try:
+        # Agar text JSON format me hai
         data = json.loads(text)
         lecture_text = data.get("text", "")
     except json.JSONDecodeError:
-        lecture_text = text
+        pass  # Agar JSON nahi, text directly use hoga
 
-    # Temporary file save karna
-    path = f"temp_{file.filename}"
-    with open(path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    raw_text = ""
+    if file:
+        path = f"temp_{file.filename}"
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
 
-    # File type ke hisaab se text extract karna
-    if file.filename.endswith(".pdf"):
-        raw_text = load_pdf(path)
-    elif file.filename.endswith(".pptx"):
-        raw_text = load_ppt(path)
-    else:
-        return {"error": "Unsupported file type"}
+        # File type check
+        if file.filename.endswith(".pdf"):
+            raw_text = load_pdf(path)
+        elif file.filename.endswith(".pptx") or file.filename.endswith(".ppt"):
+            raw_text = load_ppt(path)
+        else:
+            return {"status": 400, "message": "Unsupported file type"}
+
+        os.remove(path)  # Temporary file remove
 
     # Paragraphs ko sentences me convert karna
     clean_data = paragraph_to_sentences(lecture_text)
 
-    # Summary generate karna
+    # Short summary
     text_for_summary = " ".join(clean_data)
     summary_from_qroq = get_short_summary(text_for_summary)
 
     # LLM se refined text
     refined_text = llm_refine_text(raw_text)
 
-    # Professor style lecture notes generate karna
+    # Professor style lecture notes
     lecture_notes = generate_professor_summary(refined_text)
 
-    # Final lecture notes prepare karna
+    # Final notes prepare karna
     lecture_prepared = generate_final_lecture_notes(lecture_notes, summary_from_qroq)
 
     # Markdown me convert karna
     final_answer = convert_notes_to_markdown(lecture_prepared)
 
-    return {"status": 200, "message": final_answer}
+    return {"status": 200, "text": final_answer}
