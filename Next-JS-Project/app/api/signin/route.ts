@@ -68,7 +68,6 @@ export async function POST (request: Request){
             });
         }
 
-
         email_already_exist.is_verified = true;
         email_already_exist.otp = null;
         email_already_exist.expiry_time = null;
