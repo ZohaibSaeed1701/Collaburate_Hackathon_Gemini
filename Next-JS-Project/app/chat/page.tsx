@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Message {
   type: "user" | "bot";
@@ -12,12 +13,31 @@ export default function ChatBot() {
   const [question, setQuestion] = useState("");
   const [chat, setChat] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const pdfUrl = searchParams.get("pdfUrl");
+    if (!pdfUrl) return;
+    (async () => {
+      try {
+        const res = await fetch(pdfUrl);
+        if (!res.ok) throw new Error("Unable to fetch lecture PDF");
+        const blob = await res.blob();
+        const filename = pdfUrl.split("/").pop() || "lecture.pdf";
+        const newFile = new File([blob], filename, { type: blob.type });
+        setFile(newFile);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [searchParams]);
 
   const handleSubmit = async () => {
     if (!file || !question) return;
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("pdfUrl", searchParams.get("pdfUrl") || "");
     formData.append("question", question);
 
     // Add user message to chat
@@ -26,7 +46,7 @@ export default function ChatBot() {
     setQuestion("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/chat-with-notes", {
+      const response = await fetch("/api/chat-with-notes", {
         method: "POST",
         body: formData,
       });

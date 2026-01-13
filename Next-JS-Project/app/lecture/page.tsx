@@ -19,6 +19,7 @@ export default function LecturePage() {
   const [file, setFile] = useState<File | null>(null);
   const [response, setResponse] = useState("");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,7 +109,7 @@ export default function LecturePage() {
     if (file) formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8000/lecture", {
+      const res = await fetch("/api/lecture", {
         method: "POST",
         body: formData,
       });
@@ -121,28 +122,65 @@ export default function LecturePage() {
     }
   };
 
-  const downloadPDF = async () => {
-    if (!response) return;
-    setIsGeneratingPDF(true);
-
+  const buildPdfBlob = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
     const html = md.render(response);
-
     const div = document.createElement("div");
     div.innerHTML = html;
     div.style.padding = "40px";
     div.style.color = "#000";
 
-    await (html2pdf as any)()
+    const worker: any = (html2pdf as any)()
       .from(div)
       .set({
         filename: "LectureNotes.pdf",
         html2canvas: { scale: 2 },
         jsPDF: { format: "a4" },
-      })
-      .save();
+      });
 
-    setIsGeneratingPDF(false);
+    const blob: Blob = await worker.outputPdf("blob");
+    return blob;
+  };
+
+  const downloadPDF = async () => {
+    if (!response) return;
+    setIsGeneratingPDF(true);
+    try {
+      const blob = await buildPdfBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "LectureNotes.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const saveToCloud = async () => {
+    if (!response) return;
+    setIsSaving(true);
+    try {
+      const blob = await buildPdfBlob();
+      const formData = new FormData();
+      formData.append("title", "Lecture Notes");
+      formData.append("file", blob, "LectureNotes.pdf");
+
+      const res = await fetch("/api/lectures", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Upload failed");
+      }
+      alert("Lecture saved to cloud successfully");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -206,6 +244,13 @@ export default function LecturePage() {
                 className="px-4 py-2 bg-teal-600 text-white rounded"
               >
                 {isGeneratingPDF ? "Generating..." : "Download PDF"}
+              </button>
+              <button
+                onClick={saveToCloud}
+                className="px-4 py-2 bg-indigo-600 text-white rounded ml-2 disabled:opacity-50"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save & Publish"}
               </button>
             </div>
 

@@ -51,7 +51,7 @@ export default function LecturePage() {
     if (file) formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:8000/lecture", {
+    const res = await fetch("/api/lecture", {
         method: "POST",
         body: formData,
       });

@@ -17,9 +17,6 @@ app.add_middleware(
 )
 
 app.include_router(lecture_routes)
-app.post("/test")
-def test:
-    return {status: 200, "message": "OKAY"}
 
 @app.get("/")
 def root():
