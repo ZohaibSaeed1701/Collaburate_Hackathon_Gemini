@@ -46,10 +46,19 @@ export async function POST(request: Request) {
     const response = await fetch(`${PY_BACKEND_URL}/chat-with-notes`, {
       method: "POST",
       body: forwardForm,
+      cache: "no-store",
     });
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    const text = await response.text();
+    try {
+      const parsed = JSON.parse(text);
+      return NextResponse.json(parsed, { status: response.status });
+    } catch {
+      return NextResponse.json(
+        { status: response.status, message: text || "Backend error" },
+        { status: response.status }
+      );
+    }
   } catch (error) {
     console.error("Proxy /chat-with-notes failed:", error);
     return NextResponse.json(

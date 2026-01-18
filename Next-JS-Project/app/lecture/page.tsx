@@ -184,74 +184,157 @@ export default function LecturePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-black">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
-        <h1 className="text-3xl font-bold">Teacher Lecture Dashboard</h1>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Voice Recording</h2>
-          <div className="flex gap-4 items-center">
-            <button
-              onClick={startRecording}
-              disabled={isRecording}
-              className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
-            >
-              Start
-            </button>
-            <button
-              onClick={stopRecording}
-              disabled={!isRecording}
-              className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50"
-            >
-              Stop
-            </button>
-            <span className="ml-auto font-mono">
-              {formatTime(recordingTime)}
-            </span>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-blue-50 text-black">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-10 space-y-8">
+        {/* Hero */}
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-white/80 backdrop-blur shadow-2xl p-8 lg:p-10">
+          <div className="absolute inset-0 blur-3xl bg-gradient-to-br from-indigo-200 via-white to-emerald-200 opacity-60" />
+          <div className="relative grid lg:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-semibold shadow-sm">
+                Create Lecture Notes
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                Speak, upload, and publish polished notes in minutes.
+              </h1>
+              <p className="text-gray-600">
+                Capture your lecture with voice or slides, let AI structure it, render Markdown,
+                and publish a cloud PDF ready for students to download or chat with.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs text-gray-700">
+                <Badge text="Proxy to FastAPI" />
+                <Badge text="Cloud PDF ready" />
+                <Badge text="Markdown preview" />
+                <Badge text="Student chat-ready" />
+              </div>
+            </div>
+            <div className="relative rounded-2xl bg-gradient-to-br from-white to-indigo-50 border border-indigo-100 shadow-lg p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-indigo-600 uppercase">Status</p>
+                  <p className="text-sm text-gray-600">
+                    {isSubmitting ? "Processing..." : response ? "Notes ready" : "Awaiting input"}
+                  </p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                  {response ? "Generated" : isSubmitting ? "Running" : "Idle"}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-xs text-gray-700">
+                <Info label="Recording" value={isRecording ? "Live" : "Stopped"} />
+                <Info label="Transcript" value={transcript ? "Captured" : "Empty"} />
+                <Info label="Slides" value={file ? "Attached" : "None"} />
+              </div>
+              <div className="text-xs text-gray-500">
+                Tip: You can use either voice transcript or upload slides—or both for richer notes.
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Live Transcript</h2>
-          <textarea
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            rows={6}
-            className="w-full border p-3 rounded font-mono"
-          />
+        {/* Controls */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-4">
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-indigo-600 uppercase">
+                    Voice capture
+                  </p>
+                  <p className="text-sm text-gray-700">Record your lecture live.</p>
+                </div>
+                <span className="text-xs font-semibold text-gray-500">
+                  {formatTime(recordingTime)}
+                </span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={startRecording}
+                  disabled={isRecording}
+                  className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold disabled:opacity-50 shadow"
+                >
+                  Start
+                </button>
+                <button
+                  onClick={stopRecording}
+                  disabled={!isRecording}
+                  className="flex-1 px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold disabled:opacity-50 shadow"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-3">
+              <p className="text-xs font-semibold text-indigo-600 uppercase">Upload slides</p>
+              <input
+                type="file"
+                onChange={handleFileChange}
+                className="text-sm text-gray-700"
+              />
+              {file && <p className="text-xs text-gray-600">Attached: {file.name}</p>}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 space-y-4">
+            <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-indigo-600 uppercase">
+                    Live transcript
+                  </p>
+                  <p className="text-sm text-gray-700">Edit any time before sending.</p>
+                </div>
+                <span className="text-xs text-gray-500">Autosaves in state</span>
+              </div>
+              <textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                rows={8}
+                className="w-full border border-gray-200 rounded-xl p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold shadow-lg hover:bg-indigo-700 disabled:opacity-60 w-full sm:w-auto"
+              >
+                {isSubmitting ? "Processing..." : "Send to AI & Prepare Notes"}
+              </button>
+              <p className="text-xs text-gray-600">
+                Attach slides or rely on voice — both are supported for richer notes.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Upload Slides</h2>
-          <input type="file" onChange={handleFileChange} />
-          {file && <p className="mt-2 text-sm">{file.name}</p>}
-        </div>
-
-        <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="w-full py-3 bg-blue-600 text-white rounded font-semibold disabled:opacity-50"
-        >
-          {isSubmitting ? "Processing..." : "Send to AI & Prepare Notes"}
-        </button>
-
+        {/* Output */}
         {response && (
-          <div className="bg-white p-6 rounded-lg shadow space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">AI Generated Notes</h2>
-              <button
-                onClick={downloadPDF}
-                className="px-4 py-2 bg-teal-600 text-white rounded"
-              >
-                {isGeneratingPDF ? "Generating..." : "Download PDF"}
-              </button>
-              <button
-                onClick={saveToCloud}
-                className="px-4 py-2 bg-indigo-600 text-white rounded ml-2 disabled:opacity-50"
-                disabled={isSaving}
-              >
-                {isSaving ? "Saving..." : "Save & Publish"}
-              </button>
+          <div className="rounded-3xl bg-white border border-gray-200 shadow-lg p-6 space-y-4">
+            <div className="flex flex-wrap gap-3 items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-indigo-600 uppercase">
+                  AI Generated Notes
+                </p>
+                <h2 className="text-2xl font-bold text-gray-900">Ready for your class</h2>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadPDF}
+                  className="px-4 py-2 rounded-lg bg-teal-600 text-white font-semibold shadow hover:bg-teal-700"
+                >
+                  {isGeneratingPDF ? "Generating..." : "Download PDF"}
+                </button>
+                <button
+                  onClick={saveToCloud}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 disabled:opacity-60"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save & Publish"}
+                </button>
+              </div>
             </div>
 
             <div
@@ -259,17 +342,36 @@ export default function LecturePage() {
               dangerouslySetInnerHTML={{ __html: md.render(response) }}
             />
 
-            <details>
-              <summary className="cursor-pointer font-semibold">
+            <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <summary className="cursor-pointer font-semibold text-gray-800">
                 View Raw Markdown
               </summary>
-              <pre className="mt-2 p-4 bg-gray-100 rounded text-sm">
+              <pre className="mt-2 p-4 bg-white rounded text-sm border border-gray-100 overflow-auto">
                 {response}
               </pre>
             </details>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Badge({ text }: { text: string }) {
+  return (
+    <span className="px-3 py-1 rounded-full bg-white border border-gray-200 text-xs font-semibold text-gray-800 shadow-sm">
+      {text}
+    </span>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
+      <p className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold">
+        {label}
+      </p>
+      <p className="text-sm font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

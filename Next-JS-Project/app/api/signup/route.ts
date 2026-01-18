@@ -43,8 +43,8 @@ export async function POST (request: Request){
 
         const hashpassword = await bcrypt.hash(password, 10);
 
-
-        const expiry_times = new Date(Date.now() + 60 * 60 * 1000);
+        // 30 minutes expiry for OTP
+        const expiry_times = new Date(Date.now() + 30 * 60 * 1000);
 
         const new_otp = generate_otp();
         
@@ -67,7 +67,7 @@ export async function POST (request: Request){
         return new Response(JSON.stringify(
             {
                 success: true,
-                message: "User register successfully",
+                message: "User registered. Check your email for OTP (valid 30 mins).",
             }), {
                 status: 200,
             headers: { "Content-Type": "application/json" },

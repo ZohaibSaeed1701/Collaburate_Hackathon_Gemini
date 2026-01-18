@@ -45,15 +45,24 @@ export async function POST(request: Request) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    if (buffer.byteLength === 0) {
+      return NextResponse.json(
+        { success: false, message: "Generated PDF is empty. Please regenerate notes." },
+        { status: 400 }
+      );
+    }
 
     const uploadResult = await new Promise<{
       secure_url: string;
     }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "raw",
+          // Use auto to ensure correct content-type for inline PDF viewing
+          resource_type: "auto",
           folder: "lecture-notes",
           format: "pdf",
+          use_filename: true,
+          unique_filename: true,
         },
         (error, result) => {
           if (error || !result) return reject(error);

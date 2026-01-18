@@ -27,7 +27,9 @@ def load_text(file_path: str) -> str:
             return f.read()
 
 def process_and_answer(file_path: str, question: str) -> str:
-    text = load_text(file_path)
+    text = load_text(file_path) or ""
+    if not text.strip():
+        return "No content found in the uploaded file. Please upload a PDF/TXT with text."
 
     # Chunking
     chunks = []
@@ -35,19 +37,28 @@ def process_and_answer(file_path: str, question: str) -> str:
     for i in range(0, len(text), chunk_size):
         chunks.append(text[i:i + chunk_size])
 
+    if not chunks:
+        return "Could not create chunks from the file. Please try another file."
+
     # Embeddings
-    embeddings = embed_model.encode(chunks)
-    embeddings = np.array(embeddings).astype("float32")
+    try:
+        embeddings = embed_model.encode(chunks)
+        embeddings = np.array(embeddings).astype("float32")
+    except Exception:
+        return "Embedding failed for the provided file. Please try another file."
 
     # FAISS index
+    if embeddings.ndim != 2 or embeddings.shape[0] == 0:
+        return "No embeddings generated from the notes."
+
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(embeddings)
 
     # Question embedding
     q_embedding = embed_model.encode([question]).astype("float32")
-    _, indices = index.search(q_embedding, 3)
+    _, indices = index.search(q_embedding, min(3, len(chunks)))
 
-    context = " ".join([chunks[i] for i in indices[0]])
+    context = " ".join([chunks[i] for i in indices[0] if i < len(chunks)])
 
     prompt = f"""
 You are a student assistant.
