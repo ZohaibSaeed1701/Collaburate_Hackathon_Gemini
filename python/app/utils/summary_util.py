@@ -1,36 +1,29 @@
-from groq import Groq
+from google import genai
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = Groq(api_key=os.getenv("TOPIC_FINDER_QROQ_AI"))
+client = genai.Client(api_key=os.getenv("GEMINI_API"))
 
 def get_short_summary(text: str):
+    if not os.getenv("GEMINI_API"):
+        raise ValueError("GEMINI_API is missing in environment.")
     prompt = f"""
     You are an expert lecturer and note-taker.
-    Please provide a **concise summary** of the following lecture text,
+    Please provide a **detailed but structured summary** of the following lecture text,
     highlighting **key concepts, definitions, formulas, examples, and main points**.
-    Keep it short and structured in bullet points or numbered list.
+    - Include important slide details (not just headlines).
+    - Keep it structured in bullet points or numbered list.
+    - Make it richer than a short outline while staying clear and exam-friendly.
 
     Lecture Text:
     {text}
     """
 
-    completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.5,            # moderate creativity
-        max_completion_tokens=1024, # enough for short summary
-        top_p=1,
-        reasoning_effort="medium",
-        stream=True
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
 
-    summary = ""
-    for chunk in completion:
-        summary += chunk.choices[0].delta.content or ""
-
-    return summary
+    return response.text or ""

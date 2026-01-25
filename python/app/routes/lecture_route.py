@@ -1,4 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from google.genai.errors import ClientError
+import logging
 import shutil, json, os
 from app.utils.sentence_util import paragraph_to_sentences
 from app.utils.summary_util import get_short_summary
@@ -10,6 +12,7 @@ from app.utils.convert_notes_into_markdown_util import convert_notes_to_markdown
 from app.utils.chat_with_notes_util import process_and_answer
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/lecture")
 async def clean_lecture_text(
@@ -48,21 +51,29 @@ async def clean_lecture_text(
     # Paragraphs ko sentences me convert karna
     clean_data = paragraph_to_sentences(lecture_text)
 
-    # Short summary
-    text_for_summary = " ".join(clean_data)
-    summary_from_qroq = get_short_summary(text_for_summary)
+    try:
+        # Short summary
+        text_for_summary = " ".join(clean_data)
+        summary_from_qroq = get_short_summary(text_for_summary)
 
-    # LLM se refined text
-    refined_text = llm_refine_text(raw_text)
+        # LLM se refined text
+        refined_text = llm_refine_text(raw_text)
 
-    # Professor style lecture notes
-    lecture_notes = generate_professor_summary(refined_text)
+        # Professor style lecture notes
+        lecture_notes = generate_professor_summary(refined_text)
 
-    # Final notes prepare karna
-    lecture_prepared = generate_final_lecture_notes(lecture_notes, summary_from_qroq)
+        # Final notes prepare karna
+        lecture_prepared = generate_final_lecture_notes(lecture_notes, summary_from_qroq)
 
-    # Markdown me convert karna
-    final_answer = convert_notes_to_markdown(lecture_prepared)
+        # Markdown me convert karna
+        final_answer = convert_notes_to_markdown(lecture_prepared)
+    except ClientError as e:
+        status_code = getattr(e, "status_code", 500)
+        logger.exception("Gemini client error in /lecture")
+        raise HTTPException(status_code=status_code, detail=str(e))
+    except Exception as e:
+        logger.exception("Unhandled error in /lecture pipeline")
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {"status": 200, "text": final_answer}
 

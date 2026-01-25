@@ -1,11 +1,16 @@
 # app/utils/professor_summary_util.py
 
-from groq import Groq
+from google import genai
 import os
+from dotenv import load_dotenv
 
-client = Groq(api_key=os.getenv("TOPIC_FINDER_QROQ_AI"))
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GEMINI_API"))
 
 def generate_professor_summary(extracted_text: str) -> str:
+    if not os.getenv("GEMINI_API"):
+        raise ValueError("GEMINI_API is missing in environment.")
     prompt = f"""
     You are an academic summarization agent.
 
@@ -19,14 +24,12 @@ def generate_professor_summary(extracted_text: str) -> str:
     {extracted_text}
     """
 
-    completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_completion_tokens=800,
-        top_p=1,
-        reasoning_effort="medium",
-        stream=False
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
 
-    return completion.choices[0].message.content.strip()
+    if not getattr(response, "text", None):
+        return ""
+
+    return response.text.strip()

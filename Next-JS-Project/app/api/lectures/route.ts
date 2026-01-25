@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     await dbConnect();
     const form = await request.formData();
     const title = (form.get("title") as string) || "Lecture Notes";
+    const notesMarkdown = (form.get("notesMarkdown") as string) || "";
     const file = form.get("file");
 
     if (!file || !(file instanceof File)) {
@@ -72,7 +73,11 @@ export async function POST(request: Request) {
       stream.end(buffer);
     });
 
-    const doc = await Lecture.create({ title, pdfUrl: uploadResult.secure_url });
+    const doc = await Lecture.create({
+      title,
+      pdfUrl: uploadResult.secure_url,
+      notesMarkdown,
+    });
 
     return NextResponse.json(
       { success: true, lecture: doc },

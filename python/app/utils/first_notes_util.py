@@ -1,9 +1,14 @@
-from groq import Groq
+from google import genai
 import os
+from dotenv import load_dotenv
 
-client = Groq(api_key=os.getenv("TOPIC_FINDER_QROQ_AI"))
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GEMINI_API"))
 
 def generate_final_lecture_notes(prof_summary: str, voice_summary: str) -> str:
+    if not os.getenv("GEMINI_API"):
+        raise ValueError("GEMINI_API is missing in environment.")
     """
     Agentic RAG function to synthesize final lecture notes
     from professor notes summary and teacher voice summary.
@@ -19,9 +24,11 @@ def generate_final_lecture_notes(prof_summary: str, voice_summary: str) -> str:
         2. Teacher Voice Summary
     - Include all important concepts, definitions, formulas, and examples.
     - Avoid repetition.
-    - Keep the notes SHORT, CONCISE, and EXAM-READY.
+    - Keep the notes concise but NOT too short; include key details from slides/lecture.
     - Do NOT add any content that is NOT present in the provided summaries.
-    - Ensure formulas and technical terms are preserved accurately.
+    - Ensure formulas and technical terms are preserved accurately and written clearly
+      (use readable math notation, avoid ambiguity).
+    - Bold the main points and italicize definitions where appropriate.
 
     Professor Notes Summary:
     {prof_summary}
@@ -32,14 +39,12 @@ def generate_final_lecture_notes(prof_summary: str, voice_summary: str) -> str:
     FINAL LECTURE NOTES:
     """
 
-    completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,           # keep hallucination low
-        max_completion_tokens=2000, # enough for final notes
-        top_p=1,
-        reasoning_effort="medium",
-        stream=False
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
 
-    return completion.choices[0].message.content.strip()
+    if not getattr(response, "text", None):
+        return ""
+
+    return response.text.strip()

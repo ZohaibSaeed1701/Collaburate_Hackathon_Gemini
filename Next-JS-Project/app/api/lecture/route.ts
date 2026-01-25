@@ -24,8 +24,16 @@ export async function POST(request: Request) {
       body: forwardForm,
     });
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data, { status: response.status });
+    } catch {
+      return NextResponse.json(
+        { status: response.status, message: text || "Backend error" },
+        { status: response.status }
+      );
+    }
   } catch (error) {
     console.error("Proxy /lecture failed:", error);
     return NextResponse.json(

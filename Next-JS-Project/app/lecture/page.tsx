@@ -23,6 +23,7 @@ export default function LecturePage() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [finalTranscript, setFinalTranscript] = useState("");
 
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<number | null>(null);
@@ -44,11 +45,18 @@ export default function LecturePage() {
     recognition.lang = "en-US";
 
     recognition.onresult = (event: any) => {
-      let text = "";
+      let interimText = "";
+      let finalText = finalTranscript;
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        text += event.results[i][0].transcript;
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalText += result[0].transcript;
+        } else {
+          interimText += result[0].transcript;
+        }
       }
-      setTranscript(text);
+      setFinalTranscript(finalText);
+      setTranscript(finalText + interimText);
     };
 
     recognition.onerror = () => {
@@ -166,6 +174,7 @@ export default function LecturePage() {
       const formData = new FormData();
       formData.append("title", "Lecture Notes");
       formData.append("file", blob, "LectureNotes.pdf");
+      formData.append("notesMarkdown", response);
 
       const res = await fetch("/api/lectures", {
         method: "POST",
@@ -287,9 +296,12 @@ export default function LecturePage() {
                 </div>
                 <span className="text-xs text-gray-500">Autosaves in state</span>
               </div>
-              <textarea
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
+          <textarea
+            value={transcript}
+            onChange={(e) => {
+              setTranscript(e.target.value);
+              setFinalTranscript(e.target.value);
+            }}
                 rows={8}
                 className="w-full border border-gray-200 rounded-xl p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               />

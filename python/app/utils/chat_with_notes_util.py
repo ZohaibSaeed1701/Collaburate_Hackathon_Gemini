@@ -3,6 +3,7 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from PyPDF2 import PdfReader
+import fitz
 import os
 from dotenv import load_dotenv
 import os
@@ -15,12 +16,28 @@ embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def load_text(file_path: str) -> str:
     if file_path.endswith(".pdf"):
-        reader = PdfReader(file_path)
         text = ""
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
+        # Try PyMuPDF first (better extraction)
+        try:
+            doc = fitz.open(file_path)
+            for page in doc:
+                page_text = page.get_text()
+                if page_text:
+                    text += page_text + "\n"
+        except Exception:
+            text = ""
+
+        # Fallback to PyPDF2 if still empty
+        if not text.strip():
+            try:
+                reader = PdfReader(file_path)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            except Exception:
+                pass
+
         return text
     else:  # default to txt
         with open(file_path, "r", encoding="utf-8") as f:
@@ -29,7 +46,10 @@ def load_text(file_path: str) -> str:
 def process_and_answer(file_path: str, question: str) -> str:
     text = load_text(file_path) or ""
     if not text.strip():
-        return "No content found in the uploaded file. Please upload a PDF/TXT with text."
+        return (
+            "No text content found in the uploaded file. "
+            "If this is a scanned image PDF, please upload a text-based PDF or provide typed notes."
+        )
 
     # Chunking
     chunks = []

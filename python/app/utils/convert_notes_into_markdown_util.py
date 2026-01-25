@@ -1,10 +1,15 @@
 # app/utils/markdown_notes_rag.py
 import os
-from groq import Groq
+from google import genai
+from dotenv import load_dotenv
 
-client = Groq(api_key=os.getenv("TOPIC_FINDER_QROQ_AI"))
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GEMINI_API"))
 
 def convert_notes_to_markdown(detailed_notes: str) -> str:
+    if not os.getenv("GEMINI_API"):
+        raise ValueError("GEMINI_API is missing in environment.")
     """
     Agentic RAG to convert detailed lecture notes to Markdown format.
     - Formulas preserved
@@ -19,7 +24,9 @@ def convert_notes_to_markdown(detailed_notes: str) -> str:
     - Convert the following lecture notes to **Markdown format**
     - Use headings for main topics (e.g., ## Topic Name)
     - Use bullet points for main points
-    - Preserve all formulas accurately
+    - **Bold the main points**
+    - Preserve all formulas accurately and format them for human readability
+      (use LaTeX with $...$ for inline and $$...$$ for block equations when possible)
     - Italicize definitions wherever possible
     - Keep the notes concise, clear, and structured
     - Do NOT add any content that is not present in the provided notes
@@ -30,14 +37,12 @@ def convert_notes_to_markdown(detailed_notes: str) -> str:
     Markdown Notes:
     """
 
-    completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,           # minimize hallucinations
-        max_completion_tokens=3000, # enough for detailed markdown notes
-        top_p=1,
-        reasoning_effort="medium",
-        stream=False
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
 
-    return completion.choices[0].message.content.strip()
+    if not getattr(response, "text", None):
+        return ""
+
+    return response.text.strip()
